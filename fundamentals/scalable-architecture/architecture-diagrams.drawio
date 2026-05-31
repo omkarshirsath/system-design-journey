@@ -1,0 +1,59 @@
+
+---
+
+**architecture-diagrams.drawio**
+
+```markdown
+# Architecture Diagrams (draw.io)
+
+This is a placeholder file for your draw.io diagram. In the actual `.drawio` file (which is XML-based), you would draw these diagrams visually.
+
+## Recommended Diagrams to Create in draw.io:
+
+### 1. Simple Startup Architecture
+- Users → App API → Database
+
+### 2. Horizontal Scaling + Load Balancer
+- Users → Load Balancer → [App1, App2, App3] → Database
+
+### 3. Add Redis Cache
+- App → Redis → Database
+
+### 4. Database Read Replicas
+- Primary DB → [Replica1, Replica2, Replica3]
+
+### 5. Kafka Queue
+- API → Kafka Topic → Worker Group → DB
+
+### 6. Sharding
+- App → Shard Router → [DB1(Shard1), DB2(Shard2), DB3(Shard3)]
+
+### 7. Complete Final Architecture (The one in high-traffic-system-design.md)
+- Users → Load Balancer → [App1, App2, App3] → Redis → Kafka → Workers → Sharded DBs (with CDN on the side)
+
+## How to use this file:
+
+1. Open [draw.io](https://app.diagrams.net/)
+2. Click "Open Existing Diagram"
+3. Select this `architecture-diagrams.drawio` file
+4. Draw the diagrams above using the shapes palette
+5. Save (it will update the XML content automatically)
+
+## Alternative: Use Mermaid (for markdown)
+
+If you prefer code-based diagrams, add this to your markdown files:
+
+\`\`\`mermaid
+graph TD
+    Users --> LB[Load Balancer]
+    LB --> App1
+    LB --> App2
+    LB --> App3
+    App1 --> Redis
+    App2 --> Redis
+    App3 --> Redis
+    Redis --> Kafka
+    Kafka --> Workers
+    Workers --> DB1[(Shard 1)]
+    Workers --> DB2[(Shard 2)]
+\`\`\`
