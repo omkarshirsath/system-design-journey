@@ -355,3 +355,10 @@ For your HRMS project, a RBAC + ABAC hybrid is usually the best design:
 RBAC → Admin, Manager, Employee
 
 ABAC → Manager can only see/approve employees in their own hierarchy/department.
+
+
+Summary of the Flow :- 
+
+Login: You log in, and the backend gives you a JWT (containing your Global Role) and a list of your specific Permissions.
+Frontend UI: The frontend looks at your role and permissions to decide which pages to let you route to, and which buttons to render on your screen.
+Backend API: When you click a button to interact with data, the request is sent to the backend with your JWT attached. The Authorization Guard checks the "decorators" on that specific API route (like @AdminOnly()). If your JWT role matches, the action succeeds. If not, the server rejects it.
