@@ -1,0 +1,145 @@
+# ⚠️ Failure Handling in Payment System
+
+## Failure Types & Strategies
+
+| Failure Type | Strategy | Recovery Time |
+|--------------|----------|---------------|
+| Payment Gateway Timeout | Retry with exponential backoff | < 5 seconds |
+| Database Connection Lost | Circuit breaker + Failover | < 10 seconds |
+| Network Partition | Queue buffering | Until partition heals |
+| Duplicate Request | Idempotency key check | Instant |
+| Insufficient Balance | Return error + notify user | Instant |
+| Gateway Down | Fallback to secondary gateway | < 30 seconds |
+
+---
+
+## Retry Strategy
+
+```text
+Payment Request
+      │
+      ▼
+┌─────────────────┐
+│ Attempt 1       │───► FAIL ──► Wait 100ms
+└─────────────────┘
+      │
+      ▼
+┌─────────────────┐
+│ Attempt 2       │───► FAIL ──► Wait 200ms
+└─────────────────┘
+      │
+      ▼
+┌─────────────────┐
+│ Attempt 3       │───► FAIL ──► Wait 400ms
+└─────────────────┘
+      │
+      ▼
+┌─────────────────┐
+│ Attempt 4       │───► FAIL ──► Mark as PENDING
+└─────────────────┘
+      │
+      ▼
+┌─────────────────┐
+│ Background Job  │
+│ Verify Status   │
+│ Every 5 minutes │
+└─────────────────┘
+Circuit Breaker Pattern
+text
+        ┌─────────────────────────────────────┐
+        │         Circuit Breaker              │
+        │                                      │
+        │   ┌─────────┐                        │
+        │   │ CLOSED  │───► 5 failures ──►    │
+        │   └─────────┘                        │
+        │        │                             │
+        │        ▼                             │
+        │   ┌─────────┐                        │
+        │   │  OPEN   │───► 30 sec timeout ──►│
+        │   └─────────┘                        │
+        │        │                             │
+        │        ▼                             │
+        │   ┌─────────┐                        │
+        │   │  HALF   │───► Success ──► CLOSED │
+        │   │  OPEN   │───► Failure ──► OPEN   │
+        │   └─────────┘                        │
+        └─────────────────────────────────────┘
+Dead Letter Queue (DLQ)
+text
+Failed Payment Events
+        │
+        ▼
+┌─────────────────────────────────────┐
+│         Dead Letter Queue            │
+├─────────────────────────────────────┤
+│ • transaction_id: TXN_001           │
+│   error: GATEWAY_TIMEOUT            │
+│   retries: 5                        │
+│                                     │
+│ • transaction_id: TXN_002           │
+│   error: INVALID_CARD               │
+│   retries: 5                        │
+│                                     │
+│ • transaction_id: TXN_003           │
+│   error: INSUFFICIENT_BALANCE       │
+│   retries: 5                        │
+└─────────────────────────────────────┘
+        │
+        ▼
+   Manual Review
+   (Admin Dashboard)
+Reconciliation Process
+text
+Every Hour
+      │
+      ▼
+┌─────────────────────────────────────┐
+│ 1. Get all SUCCESS transactions     │
+│    from last hour                   │
+└─────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────┐
+│ 2. Query Gateway for same           │
+│    transactions                     │
+└─────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────┐
+│ 3. Compare results                  │
+└─────────────────────────────────────┘
+      │
+      ▼
+┌─────────────────────────────────────┐
+│ 4. Flag mismatches for manual review│
+└─────────────────────────────────────┘
+Graceful Degradation
+text
+Normal Flow:
+Payment → Gateway → Bank → Success
+
+If Gateway Down:
+Payment → Queue → Retry → Secondary Gateway
+
+If Bank Down:
+Payment → Mark PENDING → Notify User → Retry Later
+
+If Database Down:
+Payment → Write to Local Log → Replicate When DB Up
+🔥 FINAL MODEL
+text
+Payment Request
+      ↓
+Validate
+      ↓
+Create Transaction
+      ↓
+Payment Gateway
+      ↓
+Update Status
+      ↓
+Publish Event
+      ↓
+Notify User
+      ↓
+Maintain Audit Trail
